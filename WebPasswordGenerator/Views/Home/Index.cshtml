@@ -1,0 +1,473 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div>
+    <div class="form-group">
+        <label for="tb_softwareName" class="font-weight-bold">Nom du site</label>
+        <input class="form-control" id="tb_softwareName" placeholder="Entrez le nom du site" />
+    </div>
+    <label for="div_parameters" class="font-weight-bold">Paramètres</label>
+    <div class="container-fluid pt-2 border rounded " id="div_parameters">
+        <div class="form-group">
+            <label for="sl_typeOfGeneration" class="small">Type de génération de mot de passe</label>
+            <select id="sl_typeOfGeneration" class="form-control form-control-sm">
+                <option value="1">Simple</option>
+                <option value="2">Complexe</option>
+                <option value="3">Aléatoire</option>
+            </select>
+        </div>
+        <div class="form-group random-generation">
+            <label for="tb_passwordLength" class="small">Longueur du mot de passe</label>
+            <input type="number" min="0" max="100" class="form-control form-control-sm" id="tb_passwordLength" placeholder="Entrez un nombre" />
+        </div>
+        <div class="form-group random-generation">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="cb_includeLowerCase" />
+                <label class="form-check-label">Inclure des lettres minuscules</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="cb_includeUpperCase" />
+                <label class="form-check-label">Inclure des lettres majuscules</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="cb_includeNumbers" />
+                <label class="form-check-label">Inclure des nombres</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="cb_includeSymbols" />
+                <label class="form-check-label">Inclure des symboles</label>
+            </div>
+        </div>
+        <div class="form-group fixed-generation">
+            <div class="form-row">
+                <div class="col-8">
+                    <label for="tb_firstHalfOfPassword" class="small">Première partie du mot de passe</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control form-control-sm" id="tb_firstHalfOfPassword" placeholder="Entrez la première partie du mot de passe" />
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary btn-sm input-group-button" id="btn_showFirstHalf" value="false">
+                                <i id="i_show" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <label for="tb_specialCharacter" class="small">Caractère spécial</label>
+                    <input maxlength="1" class="form-control form-control-sm" id="tb_specialCharacter" placeholder="Entrez un caractère spécial" />
+                </div>
+                <div class="col">
+                    <label for="tb_numberOfNumbers" class="small">Nombre de chiffres max.</label>
+                    <input type="number" min="0" class="form-control form-control-sm" id="tb_numberOfNumbers" placeholder="Entrez un nombre" />
+                </div>
+            </div>
+        </div>
+        <div class="form-group fixed-generation">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="cb_rememberPassword" />
+                <label class="form-check-label">Ne pas oublier la première partie du mot de passe</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="generationSideRadios" id="r_clientSideGeneration" value="clientSide" checked>
+                <label class="form-check-label" for="r_clientSideGeneration">
+                    Génération côté client
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="generationSideRadios" id="r_serverSideGeneration" value="serverSide">
+                <label class="form-check-label" for="r_serverSideGeneration">
+                    Génération côté serveur
+                </label>
+            </div>
+        </div>
+    </div>
+    <button class="btn btn-primary mt-3 float-right" id="btn_generatePassword">
+        Générer le mot de passe
+    </button>
+    <div class="collapse fixed-bottom" id="collapseExample">
+        <div class="card card-body alert alert-success d-inline-block w-50" style="margin-left:25%">
+            <span class="float-left">Le mot de passe généré a été copié dans le presse-papier.</span>
+            <button id="btn_hideAlert" type="button" class="close float-right" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    FillAllInputs();
+    SimpleIsSelected();
+    ChangeParametersLayout($("#sl_typeOfGeneration"));
+
+    $("#btn_showFirstHalf").click(function () {
+        if ($(this).attr("value") == "true") {
+            $(this).attr("value", "false");
+            $("#i_show").removeClass("fa-eye-slash");
+            $("#i_show").addClass("fa-eye");
+            $("#tb_firstHalfOfPassword").attr("type", "password");
+        }
+        else {
+            $(this).attr("value", "true");
+            $("#i_show").removeClass("fa-eye");
+            $("#i_show").addClass("fa-eye-slash");
+            $("#tb_firstHalfOfPassword").attr("type", "text");
+        }
+    });
+
+    $("input,select").on("input", function () {
+        switch ($(this).attr("id")) {
+            case "cb_rememberPassword":
+                if ($(this).prop("checked")) {
+                    RememberPassword($("#tb_firstHalfOfPassword").val());
+                }
+                else {
+                    RememberPassword("");
+                }
+                localStorage.setItem($(this).attr("id"), $(this).prop("checked"));
+                break;
+            case "tb_firstHalfOfPassword":
+                if ($("#cb_rememberPassword").prop("checked")) {
+                    RememberPassword($(this).val());
+                }
+                break;
+            case "sl_typeOfGeneration":
+                SimpleIsSelected();
+                ChangeParametersLayout($(this));
+                localStorage.setItem($(this).attr("id"), $(this).val());
+                break;
+            case "tb_specialCharacter":
+            case "tb_numberOfNumbers":
+                localStorage.setItem($(this).attr("id"), $(this).val());
+                break;
+            default:
+                break;
+        }
+    });
+
+    function ChangeParametersLayout(generationSelect) {
+        if ($(generationSelect).val() == 3) {
+            $(".fixed-generation").hide();
+            $(".random-generation").show();
+            $("#tb_softwareName").prop("disabled", true);
+        }
+        else {
+            $(".fixed-generation").show();
+            $(".random-generation").hide();
+            $("#tb_softwareName").prop("disabled", false);
+        }
+    }
+
+    function RememberPassword(password) {
+        $.ajax({
+            type: "POST",
+            url: "@Url.Action("RememberPassword")",
+            data: { cookieValue: password },
+            dataType: "text",
+            error: function () {
+                console.log("Couldn't remember the password.");
+            }
+        });
+    }
+
+    function FillAllInputs() {
+        if (localStorage.getItem("tb_specialCharacter")) {
+            $("#tb_specialCharacter").val(localStorage.getItem("tb_specialCharacter"));
+        }
+        if (localStorage.getItem("tb_numberOfNumbers")) {
+            $("#tb_numberOfNumbers").val(localStorage.getItem("tb_numberOfNumbers"));
+        }
+        if (localStorage.getItem("sl_typeOfGeneration")) {
+            $("#sl_typeOfGeneration").val(localStorage.getItem("sl_typeOfGeneration"));
+        }
+        if (localStorage.getItem("cb_rememberPassword")) {
+            var boolean = localStorage.getItem("cb_rememberPassword").toLowerCase();
+            if (boolean == "true")
+                $("#cb_rememberPassword").prop("checked", true);
+            else
+               $("#cb_rememberPassword").prop("checked", false);
+        }
+        if ($("#cb_rememberPassword").prop("checked") == true) {
+            $("#tb_firstHalfOfPassword").val("@ViewData["FirstHalfOfPassword"]");
+        }
+    }
+
+    $("#btn_generatePassword").click(function () {
+        var softwareName = $("#tb_softwareName").val();
+        var half = $("#tb_firstHalfOfPassword").val();
+        var specialChar = $("#tb_specialCharacter").val();
+        var maxAmountOfNumbers = $("#tb_numberOfNumbers").val();
+        var typeOfGeneration = $("#sl_typeOfGeneration").val();
+        var generatedPassword;
+        switch (typeOfGeneration) {
+            case "1":
+                generatedPassword = GenerateSimplePassword(softwareName, half, specialChar);
+                break;
+            case "2":
+                generatedPassword = GenerateComplexPassword(softwareName, half, specialChar, maxAmountOfNumbers)
+                break;
+            case "3":
+                generatedPassword = GenerateRandomPassword($("#tb_passwordLength").val(), $("#cb_includeLowerCase").prop("checked"), $("#cb_includeUpperCase").prop("checked"), $("#cb_includeNumbers").prop("checked"), $("#cb_includeSymbols").prop("checked"));
+            default:
+                break;
+        }
+        var $temp = $("<input>");
+        $("body").append($temp);
+        $temp.val(generatedPassword).select();
+        document.execCommand("copy");
+        $temp.remove();
+        $('#collapseExample').collapse();
+    });
+
+    $("#btn_hideAlert").click(function () {
+        $("#collapseExample").collapse("hide");
+        $("#collapseExample").collapse("dispose");
+    });
+
+    function SimpleIsSelected() {
+        if ($("#sl_typeOfGeneration").val() == 1)
+            $("#tb_numberOfNumbers").prop("disabled", true);
+        else
+            $("#tb_numberOfNumbers").prop("disabled", false);
+    }
+
+    function GetMostUsedLetter(string) {
+        string = string.toUpperCase();
+        var letters = new Object();
+        var mostUsedLetter = string[0];
+        for (var i = 0; i < string.length; i++) {
+            var letter = string[i];
+            if (letters[letter] != undefined) {
+                letters[letter]++;
+                if (letters[letter] > letters[mostUsedLetter]) {
+                    mostUsedLetter = letter;
+                }
+            }
+            else {
+                letters[letter] = 1;
+            }
+        }
+        return mostUsedLetter;
+    }
+
+    function TransferLettersToNumbers(letters) {
+        var numbers = "";
+        const arrayOfChar = letters.toUpperCase().split('');
+        for (var i = 0; i < letters.length; i++)
+        {
+            switch (arrayOfChar[i]) {
+                case 'A':
+                    numbers += "1";
+                    break;
+                case 'B':
+                    numbers += "2";
+                    break;
+                case 'C':
+                    numbers += "3";
+                    break;
+                case 'D':
+                    numbers += "4";
+                    break;
+                case 'E':
+                    numbers += "5";
+                    break;
+                case 'F':
+                    numbers += "6";
+                    break;
+                case 'G':
+                    numbers += "7";
+                    break;
+                case 'H':
+                    numbers += "8";
+                    break;
+                case 'I':
+                    numbers += "9";
+                    break;
+                case 'J':
+                    numbers += "10";
+                    break;
+                case 'K':
+                    numbers += "11";
+                    break;
+                case 'L':
+                    numbers += "12";
+                    break;
+                case 'M':
+                    numbers += "13";
+                    break;
+                case 'N':
+                    numbers += "14";
+                    break;
+                case 'O':
+                    numbers += "15";
+                    break;
+                case 'P':
+                    numbers += "16";
+                    break;
+                case 'Q':
+                    numbers += "17";
+                    break;
+                case 'R':
+                    numbers += "18";
+                    break;
+                case 'S':
+                    numbers += "19";
+                    break;
+                case 'T':
+                    numbers += "20";
+                    break;
+                case 'U':
+                    numbers += "21";
+                    break;
+                case 'V':
+                    numbers += "22";
+                    break;
+                case 'W':
+                    numbers += "23";
+                    break;
+                case 'X':
+                    numbers += "24";
+                    break;
+                case 'Y':
+                    numbers += "25";
+                    break;
+                case 'Z':
+                    numbers += "26";
+                    break;
+            }
+        }
+        return numbers;
+    }
+
+    function GenerateRandomPassword(passwordLength, allowLowerCase, allowUpperCase, allowNumbers, allowSymbols) {
+        var generatedPassword = "";
+        if ($("#r_clientSideGeneration").prop("checked")) {
+            var parameters = new Object();
+            var lowerCase = "azertyuiopqsdfghjklmwxcvbn";
+            var upperCase = "AZERTYUIOPQSDFGHJKLMWXCVBN";
+            var numbers = "1234567890";
+            var symbols = "&é~\"#'{([-|è`_\\ç^à\)]=¨$£¤ù%*µ,?;.:/!§<>²";
+            var count = 0;
+            if (allowLowerCase) {
+                count++;
+                parameters[count] = lowerCase;
+            }
+            if (allowUpperCase) {
+                count++;
+                parameters[count] = upperCase;
+            }
+            if (allowNumbers) {
+                count++;
+                parameters[count] = numbers;
+            }
+            if (allowSymbols) {
+                count++;
+                parameters[count] = symbols;
+            }
+            for (var i = 0; i < passwordLength; i++) {
+                var randomValue = Math.floor(Math.random() * count) + 1;
+                var parameter = parameters[randomValue];
+                randomValue = Math.floor(Math.random() * parameter.length);
+                var letter = parameter[randomValue];
+                generatedPassword += letter;
+            }
+            //wip
+        }
+        else {
+            $.ajax({
+                async: false,
+                type: "GET",
+                url: "@Url.Action("GenerateRandomPassword")",
+                dataType: "json",
+                data: {
+                    passwordLength: passwordLength,
+                    allowLowerCase: allowLowerCase,
+                    allowUpperCase: allowUpperCase,
+                    allowNumbers: allowNumbers,
+                    allowSymbols: allowSymbols
+                },
+                success: function (response) {
+                    $("body").append('<input id="tempRandomGeneration" style="opacity:0"/>');
+                    $("#tempRandomGeneration").val(response.password);
+                },
+                error: function () {
+                    console.log("Couldn't generate the password.");
+                }
+            });
+            generatedPassword = $("#tempRandomGeneration").val();
+            $("#tempRandomGeneration").remove();
+        }
+        return generatedPassword;
+    }
+
+    function GenerateSimplePassword(softwareName, firstHalfOfPassword, specialChar) {
+        var generatedPassword = firstHalfOfPassword;
+        if ($("#r_clientSideGeneration").prop("checked")) {
+            generatedPassword += TransferLettersToNumbers(softwareName.substring(0, 3));
+            generatedPassword += softwareName.substring(3, 4).toUpperCase();
+            generatedPassword += specialChar;
+        }
+        else {
+            $.ajax({
+                async: false,
+                type: "GET",
+                url: "@Url.Action("GenerateSimplePassword")",
+                dataType: "json",
+                data: { firstHalfOfPassword: firstHalfOfPassword, softwareName: softwareName, specialChar: specialChar },
+                success: function (response) {
+                    $("body").append('<input id="tempSimpleGeneration" style="opacity:0"/>');
+                    $("#tempSimpleGeneration").val(response.password);
+                },
+                error: function () {
+                    console.log("Couldn't generate the password.");
+                }
+            });
+            generatedPassword = $("#tempSimpleGeneration").val();
+            $("#tempSimpleGeneration").remove();
+        }
+        return generatedPassword;
+    }
+
+    function GenerateComplexPassword(softwareName, firstHalfOfPassword, specialChar, maxAmountOfNumbers) {
+        var generatedPassword = firstHalfOfPassword;
+        if ($("#r_clientSideGeneration").prop("checked")) {
+            var numbersLength = "";
+            var higher = "";
+            if (softwareName.length > firstHalfOfPassword.length)
+                for (var i = 0; i < firstHalfOfPassword.length; i++) {
+                    numbersLength += firstHalfOfPassword[i] + softwareName[i];
+                }
+            else
+                for (var i = 0; i < softwareName.length; i++) {
+                    numbersLength += softwareName[i] + firstHalfOfPassword[i];
+                }
+            numbersLength = TransferLettersToNumbers(numbersLength);
+            if (maxAmountOfNumbers < numbersLength.length)
+                numbersLength = numbersLength.slice(0, maxAmountOfNumbers);
+            generatedPassword += numbersLength;
+            generatedPassword += GetMostUsedLetter(softwareName.concat(firstHalfOfPassword));
+            generatedPassword += specialChar;
+        }
+        else {
+            $.ajax({
+                async: false,
+                type: "GET",
+                url: "@Url.Action("GenerateComplexPassword")",
+                dataType: "json",
+                data: { firstHalfOfPassword: firstHalfOfPassword, softwareName: softwareName, specialChar: specialChar, maxAmountOfNumbers: maxAmountOfNumbers },
+                success: function (response) {
+                    $("body").append('<input id="tempComplexGeneration" style="opacity:0"/>');
+                    $("#tempComplexGeneration").val(response.password);
+                },
+                error: function () {
+                    console.log("Couldn't generate the password.");
+                }
+            });
+            generatedPassword = $("#tempComplexGeneration").val();
+            $("#tempComplexGeneration").remove();
+        }
+        return generatedPassword;
+    }
+</script>
